@@ -149,9 +149,8 @@ FastQC analysis was repeated, per base sequence quality has improved significant
 
 
 #### 7. Aligning sequences to reference
-#### Indexing the reference file 
- 
-##### command 
+*Indexing the reference file*
+  
 `bwa index GCA_000005845.2_ASM584v2_genomic.fna`
 
 We've got 5 new files: 
@@ -160,6 +159,117 @@ bwa index GCA_000005845.2_ASM584v2_genomic.fna.ann
 bwa index GCA_000005845.2_ASM584v2_genomic.fna.bwt  
 bwa index GCA_000005845.2_ASM584v2_genomic.fna.pac  
 bwa index GCA_000005845.2_ASM584v2_genomic.fna.sa  
+
+*Alignment of trimmed reads*
+
+`bwa mem GCA_000005845.2_ASM584v2_genomic.fna ../pairing\ reads/output_forwa
+rd_paired.fq ../pairing\ reads/output_reverse_paired.fq > ../alignment/alignment.sam`
+
+output were redirected to the file "alignment.sam"
+
+compressing of a sam-file (converting to a bam-file) 
+`samtools view -S -b alignment.sam > alignment.bam`
+getting basic statistics:
+`samtools flagstat alignment.bam`
+
+
+892776 in total (QC-passed reads + QC-failed reads)  
+0 duplicates  
+*_891649  mapped (99.87%:-nan%)_*  
+892776 paired in sequencing  
+446402 read1  
+446374 read2  
+888732 properly paired (99.55%:-nan%)  
+890667 with itself and mate mapped  
+982 singletons (0.11%:-nan%)  
+0 with mate mapped to a different chr  
+0 with mate mapped to a different chr (mapQ>=5)  
+
+_99.87% of reads were mapped (891649 out of 892776)_
+
+*Sorting and indexing BAM file*
+
+Sorting bam file by sequence coordinate on reference:
+`samtools sort alignment.bam alignment_sorted`
+
+Indexing bam file for faster search:
+`samtools index alignment_sorted.bam`
+
+results of the alignment were visualised in IGV (Integrative Genomics Viewer)
+Genomes -> Load Genome from file (choose reference)
+File -> Load from File (choose sorted bam-file)
+
+#### 8. Variant calling
+
+we're going to see how many reads have a mutation at the same position - we need to distinguish actual mutations from the sequencing errors using an mpileup, which goes through each position and “piles up” the reads, tabulating the number of bases that match or don’t match the reference. 
+
+Mpileup requires a sorted, indexed bam file.
+
+`samtools mpileup -f ../raw_data/GCA_000005845.2_ASM584v2_genomic.fna alignment_sorted.bam >  my.mpileup`
+
+To call actual variants, we will be using a program called VarScan (variant scanner). 
+
+`varscan mpileup2snp my.mpileup --min-var-freq 0.9 --variants --output-vcf 1 > VarScan_results_90%.vcf`
+
+Only SNPs will be reported  
+Warning: No p-value threshold provided, so p-values will not be calculated  
+Min coverage:	8  
+Min reads2:	2  
+Min var freq:	0.9  
+Min avg qual:	15  
+P-value thresh:	0.01  
+
+#### 9. Variant effect prediction
+
+Vcf file and annotation in gff format were added as "tracks" in IGV browser.
+ 
+
+Three mutations were found and explored, two of them occur in genes
+find whether each mutation occurs in a gene, 
+whether it is missense (changes the amino acid sequence),
+nonsense (introduces a frameshift or early stop codon) 
+synonymous (no amino acid change). 
+
+The following variants were identidied:
+
+93043  
+C to G  
+ftsI  
+Missense  
+Alanine to Glycine  
+  
+482698  
+A to T  
+acrB  
+Missense  
+Glutamate to Leucine  
+
+852762  
+A to G  
+Non-coding region  
+—
+  
+3535147  
+T to G  
+envZ  
+Missense  
+Valine to Glycine  
+
+4390754  
+C to A  
+rsgA  
+Synonymous  
+
+
+
+
+
+
+
+
+
+
+
 
 
 
